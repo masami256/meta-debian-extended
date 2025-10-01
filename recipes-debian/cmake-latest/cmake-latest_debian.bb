@@ -1,18 +1,24 @@
-#
-# base recipe: meta/recipes-devtools/cmake/cmake_3.14.1.bb
-# base branch: warrior
-#
+FILESEXTRAPATHS_prepend := "${THISDIR}/cmake-latest:"
 
-require cmake-latest.inc
+require cmake-latest-common.inc
 
-inherit cmake
+inherit cmake bash-completion
 
-DEPENDS += "bzip2 curl expat libarchive ncurses xz zlib"
+DEPENDS += "curl expat zlib libarchive xz ncurses bzip2"
 
 SRC_URI_append_class-nativesdk = " \
     file://OEToolchainConfig.cmake \
+    file://SDKToolchainConfig.cmake.template \
+    file://cmake-setup.py \
     file://environment.d-cmake.sh \
     file://0001-CMakeDetermineSystem-use-oe-environment-vars-to-load.patch \
+"
+
+LICENSE_append = " & BSD-1-Clause & MIT"
+LIC_FILES_CHKSUM_append = " \
+    file://Utilities/cmjsoncpp/LICENSE;md5=fa2a23dd1dc6c139f35105379d76df2b \
+    file://Utilities/cmlibrhash/COPYING;md5=a8c2a557a5c53b1c12cddbee98c099af \
+    file://Utilities/cmlibuv/LICENSE;md5=a68902a430e32200263d182d44924d47 \
 "
 
 # Strip ${prefix} from ${docdir}, set result into docdir_stripped
@@ -42,16 +48,21 @@ EXTRA_OECMAKE=" \
 "
 
 do_install_append_class-nativesdk() {
-	mkdir -p ${D}${datadir}/cmake
-	install -m 644 ${WORKDIR}/OEToolchainConfig.cmake ${D}${datadir}/cmake/
+    mkdir -p ${D}${datadir}/cmake
+    install -m 644 ${WORKDIR}/OEToolchainConfig.cmake ${D}${datadir}/cmake/
 
-	mkdir -p ${D}${SDKPATHNATIVE}/environment-setup.d
-	install -m 644 ${WORKDIR}/environment.d-cmake.sh ${D}${SDKPATHNATIVE}/environment-setup.d/cmake.sh
+    mkdir -p ${D}${SDKPATHNATIVE}/environment-setup.d
+    install -m 644 ${WORKDIR}/environment.d-cmake.sh ${D}${SDKPATHNATIVE}/environment-setup.d/cmake.sh
+
+    # install cmake-setup.py to create arch-specific toolchain cmake file from template
+    install -m 0644 ${WORKDIR}/SDKToolchainConfig.cmake.template ${D}${datadir}/cmake/
+    install -d ${D}${SDKPATHNATIVE}/post-relocate-setup.d
+    install -m 0755 ${WORKDIR}/cmake-setup.py ${D}${SDKPATHNATIVE}/post-relocate-setup.d/
 }
 
 FILES_${PN}_append_class-nativesdk = " ${SDKPATHNATIVE}"
 
-FILES_${PN} += "${datadir}/cmake-${CMAKE_MAJOR_VERSION} ${datadir}/cmake ${datadir}/aclocal ${datadir}/emacs ${datadir}/vim ${datadir}/bash-completion"
+FILES_${PN} += "${datadir}/cmake-${CMAKE_MAJOR_VERSION} ${datadir}/cmake ${datadir}/aclocal ${datadir}/emacs ${datadir}/vim"
 FILES_${PN}-doc += "${docdir}/cmake-${CMAKE_MAJOR_VERSION}"
 FILES_${PN}-dev = ""
 
